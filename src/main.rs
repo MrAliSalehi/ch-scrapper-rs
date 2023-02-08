@@ -77,7 +77,7 @@ async fn main_async() -> AsyncResult {
 
 async fn handle_updates_async(conf: &AppConfig,  client: Client) -> AsyncResult {
     let image_dir = current_dir()?.join("images");
-    let to = client.resolve_username(conf.to).await.expect("couldn't resolve the username").unwrap();
+    let to = client.resolve_username(&conf.to).await.expect("couldn't resolve the username").unwrap();
     while let Some(update) = client.next_update().await? {
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
