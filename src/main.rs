@@ -1,23 +1,24 @@
 use std::env::current_dir;
-use std::path::{Path};
-use grammers_client::{Client, Config, InitParams, SignInError, Update};
+use grammers_client::{Client, Config, InitParams, Update};
 use grammers_client::types::Chat::Channel;
 use grammers_client::types::{Message};
 use grammers_session::{Session};
 use serde_json;
 use crate::config::AppConfig;
 use tokio::{runtime, task};
-use crate::utils::{config_exists, create_dir_if_not_exists, file_extension, file_name, is_valid, prompt};
+use crate::account_manager::{*};
+use crate::utils::{*};
 
 mod config;
 mod utils;
-
-const SESSION_FILE: &str = "scrapper.session";
-
-type Result = std::result::Result<(), Box<dyn std::error::Error>>;
+mod account_manager;
 
 
-fn main() -> Result {
+
+type AsyncResult = Result<(), Box<dyn std::error::Error>>;
+
+
+fn main() -> AsyncResult {
     runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -25,7 +26,7 @@ fn main() -> Result {
         .block_on(main_async())
 }
 
-async fn main_async() -> Result {
+async fn main_async() -> AsyncResult {
     if !config_exists()
     {
         println!("Config file not found");
@@ -56,35 +57,16 @@ async fn main_async() -> Result {
 
     if !client_handler.is_authorized().await.unwrap() {
         println!("you are not authorized,requesting verification code");
-        let login_token = client_handler
-            .request_login_code(&config.phone, config.api_id, &config.api_hash).await
-            .expect("failed to send code");
-        let code = prompt("Enter Code:").expect("failed to get the code");
 
-        let signed_in = client_handler.sign_in(&login_token, &code).await;
+        let signed_in = sign_in_async(&config, &client_handler).await;
 
-        match signed_in {
-            Err(SignInError::PasswordRequired(password_token)) => {
-                let hint = password_token.hint().unwrap_or("None");
-                let prompt_message = format!("Enter the password (hint {}): ", &hint);
-                let password = prompt(prompt_message.as_str()).expect("failed to get the password");
-                client_handler.check_password(password_token, password.trim()).await?;
-            }
-            Ok(user) => {
-                println!("logged in with user:{},id:{}", user.username().unwrap(), user.id());
-            }
-            Err(e) => panic!("{}", e),
-        };
-        match client_handler.session().save_to_file(SESSION_FILE) {
-            Ok(_) => { println!("session saved to: {}", SESSION_FILE) }
-            Err(e) => {
-                println!("NOTE: failed to save the session[{}],you will sign out when program stops working", e);
-            }
-        }
+        check_status(&client_handler, signed_in).await;
+
+        save_session(&client_handler)
     }
     create_dir_if_not_exists("images").expect("failed to create images directory.");
 
-    println!("signed in");
+    println!("signed in,getting updates...");
     let client = client_handler.clone();
     let network = task::spawn(async move { client_handler.run_until_disconnected().await });
     let image_dir = current_dir().unwrap().join("images");
@@ -95,7 +77,7 @@ async fn main_async() -> Result {
     Ok(())
 }
 
-async fn handle_updates_async(from: &str, image_dir: &str, client: Client) -> Result {
+async fn handle_updates_async(from: &str, image_dir: &str, client: Client) -> AsyncResult {
     while let Some(update) = client.next_update().await? {
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
@@ -114,17 +96,9 @@ async fn handle_new_message(from: &str, message: Message, image_dir: &str, clien
                 return;
             }
             let media = message.media().unwrap();
-            let extension = file_extension(&media).expect("couldn't find the file extension.");
-            let file_name = file_name(&media).expect("couldn't find the file name.");
-            let random_hash = format!("{:x}", md5::compute(file_name));
-            let path = Path::new(image_dir).join(format!("Pixoro-{}{}", random_hash, extension));
-            println!("addr:{}", path.to_str().unwrap());
-
+            let path = create_file_name_with_path(&media, image_dir);
             client.download_media(&media, &path).await.expect("couldn't download the media");
         }
         _ => {}
     }
 }
-
-
-
