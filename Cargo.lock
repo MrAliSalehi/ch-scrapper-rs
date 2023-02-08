@@ -877,8 +877,10 @@ name = "wallpaper_scrapper-rs"
 version = "0.1.0"
 dependencies = [
  "grammers-client",
+ "grammers-session",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
