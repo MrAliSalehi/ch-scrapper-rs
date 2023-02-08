@@ -1,7 +1,7 @@
 use std::env::current_dir;
-use grammers_client::{Client, Config, InitParams, Update};
+use grammers_client::{Client, Config, InitParams, InputMessage, Update};
 use grammers_client::types::Chat::Channel;
-use grammers_client::types::{Message};
+use grammers_client::types::{Chat, Message};
 use grammers_session::{Session};
 use serde_json;
 use crate::config::AppConfig;
@@ -12,7 +12,6 @@ use crate::utils::{*};
 mod config;
 mod utils;
 mod account_manager;
-
 
 
 type AsyncResult = Result<(), Box<dyn std::error::Error>>;
@@ -69,19 +68,20 @@ async fn main_async() -> AsyncResult {
     println!("signed in,getting updates...");
     let client = client_handler.clone();
     let network = task::spawn(async move { client_handler.run_until_disconnected().await });
-    let image_dir = current_dir().unwrap().join("images");
 
-    handle_updates_async(&config.from, &image_dir.to_str().unwrap(), client).await.expect("failed to handle updates");
+    handle_updates_async(&config.from, client).await.expect("failed to handle updates");
 
     network.await??;
     Ok(())
 }
 
-async fn handle_updates_async(from: &str, image_dir: &str, client: Client) -> AsyncResult {
+async fn handle_updates_async(from: &str,  client: Client) -> AsyncResult {
+    let image_dir = current_dir()?.join("images");
+    let to = client.resolve_username("tooskaefsef").await.expect("couldn't resolve the username").unwrap();
     while let Some(update) = client.next_update().await? {
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
-                handle_new_message(&from, message, &image_dir, &client).await;
+                handle_new_message(&from,&to, message, &image_dir.to_str().unwrap(), &client).await;
             }
             _ => {}
         }
@@ -89,7 +89,7 @@ async fn handle_updates_async(from: &str, image_dir: &str, client: Client) -> As
     Ok(())
 }
 
-async fn handle_new_message(from: &str, message: Message, image_dir: &str, client: &Client) {
+async fn handle_new_message(from: &str,to: &Chat, message: Message, image_dir: &str, client: &Client) {
     match message.chat() {
         Channel(ch) if ch.username().unwrap().to_string() == from => {
             if message.media().is_none() {
@@ -98,6 +98,10 @@ async fn handle_new_message(from: &str, message: Message, image_dir: &str, clien
             let media = message.media().unwrap();
             let path = create_file_name_with_path(&media, image_dir);
             client.download_media(&media, &path).await.expect("couldn't download the media");
+
+            let uploaded = client.upload_file(path).await.expect("couldn't upload the file");
+            let message = InputMessage::document(InputMessage::text("doc"), uploaded);
+            client.send_message(to, message).await.expect("couldn't send the file");
         }
         _ => {}
     }
