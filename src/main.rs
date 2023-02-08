@@ -1,12 +1,13 @@
+use std::env::current_dir;
+use std::path::{Path};
 use grammers_client::{Client, Config, InitParams, SignInError, Update};
 use grammers_client::types::Chat::Channel;
-use grammers_client::types::{Media, Message};
-use grammers_client::types::Media::Photo;
+use grammers_client::types::{Message};
 use grammers_session::{Session};
 use serde_json;
 use crate::config::AppConfig;
 use tokio::{runtime, task};
-use crate::utils::{config_exists, is_valid, prompt};
+use crate::utils::{config_exists, create_dir_if_not_exists, file_extension, file_name, is_valid, prompt};
 
 mod config;
 mod utils;
@@ -14,6 +15,7 @@ mod utils;
 const SESSION_FILE: &str = "scrapper.session";
 
 type Result = std::result::Result<(), Box<dyn std::error::Error>>;
+
 
 fn main() -> Result {
     runtime::Builder::new_current_thread()
@@ -80,21 +82,24 @@ async fn main_async() -> Result {
             }
         }
     }
+    create_dir_if_not_exists("images").expect("failed to create images directory.");
+
     println!("signed in");
     let client = client_handler.clone();
     let network = task::spawn(async move { client_handler.run_until_disconnected().await });
+    let image_dir = current_dir().unwrap().join("images");
 
-    handle_updates_async(config, client).await.expect("failed to handle updates");
+    handle_updates_async(&config.from, &image_dir.to_str().unwrap(), client).await.expect("failed to handle updates");
 
     network.await??;
     Ok(())
 }
 
-async fn handle_updates_async(config: AppConfig, client: Client) -> Result {
+async fn handle_updates_async(from: &str, image_dir: &str, client: Client) -> Result {
     while let Some(update) = client.next_update().await? {
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
-                handle_new_message(&config, message);
+                handle_new_message(&from, message, &image_dir, &client).await;
             }
             _ => {}
         }
@@ -102,14 +107,20 @@ async fn handle_updates_async(config: AppConfig, client: Client) -> Result {
     Ok(())
 }
 
-fn handle_new_message(config: &AppConfig, message: Message) {
+async fn handle_new_message(from: &str, message: Message, image_dir: &str, client: &Client) {
     match message.chat() {
-        Channel(ch) if ch.username().unwrap().to_string() == config.from => {
-            if let Some(Photo(photo)) = message.media() {
-                println!("inside media:{}", photo.id());
+        Channel(ch) if ch.username().unwrap().to_string() == from => {
+            if message.media().is_none() {
                 return;
             }
+            let media = message.media().unwrap();
+            let extension = file_extension(&media).expect("couldn't find the file extension.");
+            let file_name = file_name(&media).expect("couldn't find the file name.");
+            let random_hash = format!("{:x}", md5::compute(file_name));
+            let path = Path::new(image_dir).join(format!("Pixoro-{}{}", random_hash, extension));
+            println!("addr:{}", path.to_str().unwrap());
 
+            client.download_media(&media, &path).await.expect("couldn't download the media");
         }
         _ => {}
     }

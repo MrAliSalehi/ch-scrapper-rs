@@ -1,5 +1,9 @@
 use std::io::{BufRead, Write};
+use grammers_client::types::Media;
+use grammers_client::types::Media::Document;
+use mime::Mime;
 use crate::config::AppConfig;
+
 
 pub fn config_exists() -> bool {
     std::env::current_dir().unwrap().join("config.json").exists()
@@ -15,6 +19,7 @@ pub fn is_valid(config: &AppConfig) -> bool {
     }
     true
 }
+
 pub fn prompt(message: &str) -> Option<String> {
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
@@ -28,3 +33,45 @@ pub fn prompt(message: &str) -> Option<String> {
     stdin.read_line(&mut line).unwrap();
     return Some(line);
 }
+
+pub fn file_extension(media: &Media) -> Option<String> {
+    if let Document(document) = media {
+        let extension = document.mime_type().map(|m| {
+            let mime: Mime = m.parse().unwrap();
+            format!(".{}", mime.subtype().to_string())
+        });
+
+        if extension.is_some() {
+            return  Some(extension.unwrap());
+        }
+        return None;
+    }
+    return None;
+}
+
+pub fn file_name(media: &Media) -> Option<&str> {
+    if let Document(document) = media {
+        return Some(document.name());
+    }
+    return None;
+}
+
+pub fn create_dir_if_not_exists(path: &str) -> Option<bool> {
+    let unwrap = std::env::current_dir();
+    if unwrap.is_err() {
+        return None;
+    }
+    let current_dir = unwrap.unwrap();
+    let final_path = current_dir.join(path);
+    if !final_path.exists()
+    {
+        let create_result = std::fs::create_dir_all(&final_path);
+        if create_result.is_err()
+        {
+            return None;
+        }
+        return Some(true);
+    }
+    return Some(true);
+}
+
