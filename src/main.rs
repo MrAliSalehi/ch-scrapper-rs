@@ -75,13 +75,13 @@ async fn main_async() -> AsyncResult {
     Ok(())
 }
 
-async fn handle_updates_async(conf: &AppConfig,  client: Client) -> AsyncResult {
+async fn handle_updates_async(conf: &AppConfig, client: Client) -> AsyncResult {
     let image_dir = current_dir()?.join("images");
     let to = client.resolve_username(&conf.to).await.expect("couldn't resolve the username").unwrap();
     while let Some(update) = client.next_update().await? {
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
-                handle_new_message(&conf.from,&to, message, &image_dir.to_str().unwrap(), &client).await;
+                handle_new_message(&conf.from, &to, message, &image_dir.to_str().unwrap(), &client).await;
             }
             _ => {}
         }
@@ -89,9 +89,9 @@ async fn handle_updates_async(conf: &AppConfig,  client: Client) -> AsyncResult 
     Ok(())
 }
 
-async fn handle_new_message(from: &str,to: &Chat, message: Message, image_dir: &str, client: &Client) {
+async fn handle_new_message(from: &str, to: &Chat, message: Message, image_dir: &str, client: &Client) {
     match message.chat() {
-        Channel(ch) if ch.username().unwrap().to_string() == from => {
+        Channel(ch) if ch.username().is_some() && ch.username().unwrap() == from => {
             if message.media().is_none() {
                 return;
             }
@@ -99,9 +99,14 @@ async fn handle_new_message(from: &str,to: &Chat, message: Message, image_dir: &
             let path = create_file_name_with_path(&media, image_dir);
             client.download_media(&media, &path).await.expect("couldn't download the media");
 
-            let uploaded = client.upload_file(path).await.expect("couldn't upload the file");
+            let uploaded = client.upload_file(&path).await.expect("couldn't upload the file");
             let message = InputMessage::document(InputMessage::text("doc"), uploaded);
-            client.send_message(to, message).await.expect("couldn't send the file");
+            let send = client.send_message(to, message).await;
+            if send.is_ok() {
+                std::fs::remove_file(&path).expect("couldn't delete the file");
+                return;
+            }
+            panic!("couldn't send the file");
         }
         _ => {}
     }
