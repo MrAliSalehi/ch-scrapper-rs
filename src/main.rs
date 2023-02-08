@@ -31,9 +31,12 @@ async fn main_async() -> AsyncResult {
         println!("Config file not found");
         return Ok(());
     }
-    let content = std::fs::read_to_string("config.json").expect("Failed to read config file");
+    let content = std::fs::read_to_string("config.json")
+        .expect("Failed to read config file");
 
-    let config: AppConfig = serde_json::from_str(&content).expect("Failed To parse config,invalid json format.");
+    let config: AppConfig = serde_json::from_str(&content)
+        .expect("Failed To parse config,invalid json format.");
+
     if !is_valid(&config)
     {
         panic!("Invalid config data");
@@ -47,14 +50,15 @@ async fn main_async() -> AsyncResult {
             catch_up: true,
             ..Default::default()
         },
-        session: Session::load_file_or_create(SESSION_FILE).expect("Failed to create session"),
+        session: Session::load_file_or_create(SESSION_FILE)
+            .expect("Failed to create session"),
     }).await;
     if login.is_err() {
         panic!("failed to connect to the telegram");
     }
     let client_handler = login.expect("failed to create client");
 
-    if !client_handler.is_authorized().await.unwrap() {
+    if !client_handler.is_authorized().await.expect("couldnt get authorization status") {
         println!("you are not authorized,requesting verification code");
 
         let signed_in = sign_in_async(&config, &client_handler).await;
@@ -63,13 +67,15 @@ async fn main_async() -> AsyncResult {
 
         save_session(&client_handler)
     }
-    create_dir_if_not_exists("images").expect("failed to create images directory.");
+    create_dir_if_not_exists("images")
+        .expect("failed to create images directory.");
 
     println!("signed in,getting updates...");
     let client = client_handler.clone();
     let network = task::spawn(async move { client_handler.run_until_disconnected().await });
 
-    handle_updates_async(&config, client).await.expect("failed to handle updates");
+    handle_updates_async(&config, client).await
+        .expect("failed to handle updates");
 
     network.await??;
     Ok(())
@@ -77,7 +83,7 @@ async fn main_async() -> AsyncResult {
 
 async fn handle_updates_async(conf: &AppConfig, client: Client) -> AsyncResult {
     let image_dir = current_dir()?.join("images");
-    let to = client.resolve_username(&conf.to).await.expect("couldn't resolve the username").unwrap();
+    let to = client.resolve_username(&conf.to).await.expect("couldn't resolve the username[destination channel]").unwrap();
     while let Some(update) = client.next_update().await? {
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
