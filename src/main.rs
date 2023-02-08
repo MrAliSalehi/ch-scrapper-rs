@@ -1,5 +1,7 @@
 use grammers_client::{Client, Config, InitParams, SignInError, Update};
 use grammers_client::types::Chat::Channel;
+use grammers_client::types::{Media, Message};
+use grammers_client::types::Media::Photo;
 use grammers_session::{Session};
 use serde_json;
 use crate::config::AppConfig;
@@ -12,6 +14,14 @@ mod utils;
 const SESSION_FILE: &str = "scrapper.session";
 
 type Result = std::result::Result<(), Box<dyn std::error::Error>>;
+
+fn main() -> Result {
+    runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(main_async())
+}
 
 async fn main_async() -> Result {
     if !config_exists()
@@ -74,29 +84,36 @@ async fn main_async() -> Result {
     let client = client_handler.clone();
     let network = task::spawn(async move { client_handler.run_until_disconnected().await });
 
-    while let Some(update) = client.next_update().await? {
-        match update {
-            Update::NewMessage(message) if !message.outgoing() => {
-                match message.chat() {
-                    Channel(ch) if ch.username().unwrap().to_string() == config.from => {
-                        println!("{:#?}", message);
-                    }
-                    _ => {}
-                }
-            }
-            _ => {}
-        }
-    }
+    handle_updates_async(config, client).await.expect("failed to handle updates");
 
     network.await??;
     Ok(())
 }
 
-fn main() -> Result {
-    runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(main_async())
+async fn handle_updates_async(config: AppConfig, client: Client) -> Result {
+    while let Some(update) = client.next_update().await? {
+        match update {
+            Update::NewMessage(message) if !message.outgoing() => {
+                handle_new_message(&config, message);
+            }
+            _ => {}
+        }
+    }
+    Ok(())
 }
+
+fn handle_new_message(config: &AppConfig, message: Message) {
+    match message.chat() {
+        Channel(ch) if ch.username().unwrap().to_string() == config.from => {
+            if let Some(Photo(photo)) = message.media() {
+                println!("inside media:{}", photo.id());
+                return;
+            }
+
+        }
+        _ => {}
+    }
+}
+
+
 
