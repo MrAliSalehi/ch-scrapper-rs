@@ -18,7 +18,7 @@ pub fn is_valid(config: &AppConfig) -> bool {
     }
     if config.api_hash.len() < 3
         || config.api_id < 10
-        || config.from.len() < 3
+        || config.from.is_empty()
         || config.to.len() < 3
         || config.phone.len() < 5
     {
