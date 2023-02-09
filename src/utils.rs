@@ -1,9 +1,9 @@
 use std::ffi::OsStr;
 use crate::config::AppConfig;
 use grammers_client::types::Media;
-use grammers_client::types::Media::Document;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
+
 
 pub fn config_exists() -> bool {
     std::env::current_dir()
@@ -42,14 +42,14 @@ pub fn prompt(message: &str) -> Option<String> {
 }
 
 pub fn file_extension(media: &Media) -> Option<&str> {
-    if let Document(document) = media {
-        return Path::new(document.name()).extension().and_then(OsStr::to_str);
+    if let Media::Document(doc) = media {
+        return Path::new(doc.name()).extension().and_then(OsStr::to_str);
     }
     return None;
 }
 
 pub fn file_name(media: &Media) -> Option<&str> {
-    if let Document(document) = media {
+    if let Media::Document(document) = media {
         return Some(document.name());
     }
     return None;
@@ -73,8 +73,8 @@ pub fn create_dir_if_not_exists(path: &str) -> Option<bool> {
 }
 
 pub fn create_file_name_with_path(media: &Media, image_dir: &PathBuf) -> PathBuf {
-    let extension = file_extension(&media).expect("couldn't find the file extension.");
-    let file_name = file_name(&media).expect("couldn't find the file name.");
+    let extension = file_extension(&media).unwrap_or_else(|| "png");
+    let file_name = file_name(&media).unwrap_or_else(|| "default_name");
 
     let random_hash = format!("{:x}", md5::compute(file_name));
 

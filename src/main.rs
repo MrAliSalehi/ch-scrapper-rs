@@ -5,12 +5,12 @@ use grammers_client::types::Chat::Channel;
 use grammers_client::types::{Chat, Media};
 use grammers_client::{Client, Config, InitParams, InputMessage, Update};
 use grammers_session::{Session};
+use grammers_tl_types::enums::MessagesFilter::InputMessagesFilterDocument;
 use serde_json;
 use std::env::current_dir;
 use std::path::PathBuf;
 use std::time::Duration;
-use grammers_tl_types::enums::{MessageMedia};
-use grammers_tl_types::enums::MessagesFilter::InputMessagesFilterDocument;
+use grammers_client::types::Media::Document;
 use tokio::{spawn};
 
 mod account_manager;
@@ -35,7 +35,7 @@ async fn main() -> AsyncResult {
         panic!("Invalid config data");
     }
     println!(
-        "Account:{},[{}-{}].\nFrom [{}] To [{}].",
+        "Account:{},[{}-{}].\nFrom [{:?}] To [{}].",
         config.phone, config.api_hash, config.api_id, config.from, config.to
     );
 
@@ -114,14 +114,19 @@ async fn handle_updates_async(conf: &AppConfig, chat: Chat, image_dir: &PathBuf,
                     if ch.username().is_none() {
                         continue;
                     }
-                    if ch.username().unwrap() != conf.from {
+                    if !conf.from.contains(&ch.username().unwrap().to_string()) {
                         continue;
                     }
                     if message.media().is_none() {
                         continue;
                     }
-                    download_rename_send_media(&client, &message.media().unwrap(), image_dir, &chat).await
-                        .expect("failed to process media");
+                    if let Document(doc) = message.media().unwrap() {
+                        if !doc.mime_type().unwrap().starts_with("image") {
+                            continue;
+                        }
+                        download_rename_send_media(&client, &message.media().unwrap(), image_dir, &chat).await
+                            .expect("failed to process media");
+                    }
                 }
             }
             _ => {}
