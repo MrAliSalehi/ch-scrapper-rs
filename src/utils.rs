@@ -1,9 +1,9 @@
+use std::ffi::OsStr;
 use crate::config::AppConfig;
 use grammers_client::types::Media;
 use grammers_client::types::Media::Document;
-use mime::Mime;
 use std::io::{BufRead, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub fn config_exists() -> bool {
     std::env::current_dir()
@@ -41,17 +41,9 @@ pub fn prompt(message: &str) -> Option<String> {
     return Some(line);
 }
 
-pub fn file_extension(media: &Media) -> Option<String> {
+pub fn file_extension(media: &Media) -> Option<&str> {
     if let Document(document) = media {
-        let extension = document.mime_type().map(|m| {
-            let mime: Mime = m.parse().unwrap();
-            format!(".{}", mime.subtype().to_string())
-        });
-
-        if extension.is_some() {
-            return Some(extension.unwrap());
-        }
-        return None;
+        return Path::new(document.name()).extension().and_then(OsStr::to_str);
     }
     return None;
 }
@@ -80,11 +72,11 @@ pub fn create_dir_if_not_exists(path: &str) -> Option<bool> {
     return Some(true);
 }
 
-pub fn create_file_name_with_path(media: &Media, image_dir: &str) -> PathBuf {
+pub fn create_file_name_with_path(media: &Media, image_dir: &PathBuf) -> PathBuf {
     let extension = file_extension(&media).expect("couldn't find the file extension.");
     let file_name = file_name(&media).expect("couldn't find the file name.");
 
     let random_hash = format!("{:x}", md5::compute(file_name));
 
-    return std::path::Path::new(image_dir).join(format!("Pixoro-{}{}", random_hash, extension));
+    return Path::new(image_dir.to_str().unwrap()).join(format!("Pixoro-{}.{}", random_hash, extension));
 }

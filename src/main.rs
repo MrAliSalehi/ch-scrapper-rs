@@ -2,13 +2,16 @@ use crate::account_manager::*;
 use crate::config::AppConfig;
 use crate::utils::*;
 use grammers_client::types::Chat::Channel;
-use grammers_client::types::{Chat, Message};
+use grammers_client::types::{Chat, Media};
 use grammers_client::{Client, Config, InitParams, InputMessage, Update};
-use grammers_session::Session;
+use grammers_session::{Session};
 use serde_json;
 use std::env::current_dir;
+use std::path::PathBuf;
 use std::time::Duration;
-use tokio::{runtime, task};
+use grammers_tl_types::enums::{MessageMedia};
+use grammers_tl_types::enums::MessagesFilter::InputMessagesFilterDocument;
+use tokio::{spawn};
 
 mod account_manager;
 mod config;
@@ -16,15 +19,9 @@ mod utils;
 
 type AsyncResult = Result<(), Box<dyn std::error::Error>>;
 
-fn main() -> AsyncResult {
-    runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(main_async())
-}
 
-async fn main_async() -> AsyncResult {
+#[tokio::main]
+async fn main() -> AsyncResult {
     if !config_exists() {
         println!("Config file not found");
         return Ok(());
@@ -51,7 +48,7 @@ async fn main_async() -> AsyncResult {
         },
         session: Session::load_file_or_create(SESSION_FILE).expect("Failed to create session"),
     })
-    .await;
+        .await;
     if login.is_err() {
         panic!("failed to connect to the telegram");
     }
@@ -74,73 +71,80 @@ async fn main_async() -> AsyncResult {
 
     println!("signed in,getting updates...");
     let client = client_handler.clone();
-    let network = task::spawn(async move { client_handler.run_until_disconnected().await });
+    let network = spawn(async move { client_handler.run_until_disconnected().await });
+    let target_chat = client.resolve_username(&config.to).await
+        .expect("couldn't resolve the username[destination channel]").unwrap();
 
-    handle_updates_async(&config, client)
-        .await
-        .expect("failed to handle updates");
+    let image_dir = current_dir()?.join("images");
+
+    let image_clone = image_dir.clone();
+    let chat_clone = target_chat.clone();
+    let client_clone = client.clone();
+
+    /*spawn(async move {
+        //run_history_async(client, &target_chat, &image_dir).await.unwrap();
+    });
+    println!("out of history");
+    */
+    handle_updates_async(&config, chat_clone, &image_clone, client_clone).await?;
 
     network.await??;
     Ok(())
 }
 
-async fn handle_updates_async(conf: &AppConfig, client: Client) -> AsyncResult {
-    let image_dir = current_dir()?.join("images");
-    let to = client
-        .resolve_username(&conf.to)
-        .await
-        .expect("couldn't resolve the username[destination channel]")
-        .unwrap();
+async fn run_history_async(client: Client, chat: &Chat, image_dir: &PathBuf) -> AsyncResult {
+    let mut messages = client.search_messages(chat).filter(InputMessagesFilterDocument);
+
+    let mut last_message_id = 0;
+    while let Some(message) = messages.next().await? {
+        download_rename_send_media(&client, &message.media().unwrap(), image_dir, &chat).await
+            .expect("failed to process media");
+        async_std::task::sleep(Duration::from_millis(1300)).await;
+        last_message_id = message.id();
+    }
+    println!("last message id was:{}", last_message_id);
+    Ok(())
+}
+
+async fn handle_updates_async(conf: &AppConfig, chat: Chat, image_dir: &PathBuf, client: Client) -> AsyncResult {
     while let Some(update) = client.next_update().await? {
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
-                handle_new_message(
-                    &conf.from,
-                    &to,
-                    message,
-                    &image_dir.to_str().unwrap(),
-                    &client,
-                )
-                .await;
-                async_std::task::sleep(Duration::from_secs(1)).await;
+                if let Channel(ch) = message.chat() {
+                    if ch.username().is_none() {
+                        continue;
+                    }
+                    if ch.username().unwrap() != conf.from {
+                        continue;
+                    }
+                    if message.media().is_none() {
+                        continue;
+                    }
+                    download_rename_send_media(&client, &message.media().unwrap(), image_dir, &chat).await
+                        .expect("failed to process media");
+                }
             }
             _ => {}
         }
+        async_std::task::sleep(Duration::from_secs(1)).await;
     }
     Ok(())
 }
 
-async fn handle_new_message(
-    from: &str,
-    to: &Chat,
-    message: Message,
-    image_dir: &str,
-    client: &Client,
-) {
-    match message.chat() {
-        Channel(ch) if ch.username().is_some() && ch.username().unwrap() == from => {
-            if message.media().is_none() {
-                return;
-            }
-            let media = message.media().unwrap();
-            let path = create_file_name_with_path(&media, image_dir);
-            client
-                .download_media(&media, &path)
-                .await
-                .expect("couldn't download the media");
+async fn download_rename_send_media(client: &Client, media: &Media, image_dir: &PathBuf, to: &Chat) -> AsyncResult {
+    let path = create_file_name_with_path(&media, image_dir);
+    client.download_media(&media, &path).await
+        .expect("couldn't download the media");
 
-            let uploaded = client
-                .upload_file(&path)
-                .await
-                .expect("couldn't upload the file");
-            let message = InputMessage::document(InputMessage::text(""), uploaded);
-            let send = client.send_message(to, message).await;
-            if send.is_ok() {
-                std::fs::remove_file(&path).expect("couldn't delete the file");
-                return;
-            }
-            panic!("couldn't send the file");
-        }
-        _ => {}
+    let uploaded = client.upload_file(&path).await
+        .expect("couldn't upload the file");
+
+    let message = InputMessage::document(InputMessage::text(""), uploaded);
+    let send = client.send_message(to, message).await;
+    if send.is_ok() {
+        async_std::fs::remove_file(&path).await
+            .expect("couldn't remove the file");
+        return Ok(());
     }
+    panic!("couldn't send the file");
 }
