@@ -1,4 +1,5 @@
 use std::env::current_dir;
+use std::time::Duration;
 use grammers_client::{Client, Config, InitParams, InputMessage, Update};
 use grammers_client::types::Chat::Channel;
 use grammers_client::types::{Chat, Message};
@@ -88,6 +89,7 @@ async fn handle_updates_async(conf: &AppConfig, client: Client) -> AsyncResult {
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
                 handle_new_message(&conf.from, &to, message, &image_dir.to_str().unwrap(), &client).await;
+                async_std::task::sleep(Duration::from_secs(1)).await;
             }
             _ => {}
         }
@@ -106,7 +108,7 @@ async fn handle_new_message(from: &str, to: &Chat, message: Message, image_dir: 
             client.download_media(&media, &path).await.expect("couldn't download the media");
 
             let uploaded = client.upload_file(&path).await.expect("couldn't upload the file");
-            let message = InputMessage::document(InputMessage::text("doc"), uploaded);
+            let message = InputMessage::document(InputMessage::text(""), uploaded);
             let send = client.send_message(to, message).await;
             if send.is_ok() {
                 std::fs::remove_file(&path).expect("couldn't delete the file");
