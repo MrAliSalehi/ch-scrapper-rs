@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Debug,Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct AppConfig {
     pub api_hash: String,
     pub api_id: i32,

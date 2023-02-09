@@ -1,22 +1,20 @@
-use std::env::current_dir;
-use std::time::Duration;
-use grammers_client::{Client, Config, InitParams, InputMessage, Update};
+use crate::account_manager::*;
+use crate::config::AppConfig;
+use crate::utils::*;
 use grammers_client::types::Chat::Channel;
 use grammers_client::types::{Chat, Message};
-use grammers_session::{Session};
+use grammers_client::{Client, Config, InitParams, InputMessage, Update};
+use grammers_session::Session;
 use serde_json;
-use crate::config::AppConfig;
+use std::env::current_dir;
+use std::time::Duration;
 use tokio::{runtime, task};
-use crate::account_manager::{*};
-use crate::utils::{*};
 
+mod account_manager;
 mod config;
 mod utils;
-mod account_manager;
-
 
 type AsyncResult = Result<(), Box<dyn std::error::Error>>;
-
 
 fn main() -> AsyncResult {
     runtime::Builder::new_current_thread()
@@ -27,22 +25,22 @@ fn main() -> AsyncResult {
 }
 
 async fn main_async() -> AsyncResult {
-    if !config_exists()
-    {
+    if !config_exists() {
         println!("Config file not found");
         return Ok(());
     }
-    let content = std::fs::read_to_string("config.json")
-        .expect("Failed to read config file");
+    let content = std::fs::read_to_string("config.json").expect("Failed to read config file");
 
-    let config: AppConfig = serde_json::from_str(&content)
-        .expect("Failed To parse config,invalid json format.");
+    let config: AppConfig =
+        serde_json::from_str(&content).expect("Failed To parse config,invalid json format.");
 
-    if !is_valid(&config)
-    {
+    if !is_valid(&config) {
         panic!("Invalid config data");
     }
-    println!("Account:{},[{}-{}].\nFrom [{}] To [{}].", config.phone, config.api_hash, config.api_id, config.from, config.to);
+    println!(
+        "Account:{},[{}-{}].\nFrom [{}] To [{}].",
+        config.phone, config.api_hash, config.api_id, config.from, config.to
+    );
 
     let login = Client::connect(Config {
         api_hash: config.api_hash.clone(),
@@ -51,15 +49,19 @@ async fn main_async() -> AsyncResult {
             catch_up: true,
             ..Default::default()
         },
-        session: Session::load_file_or_create(SESSION_FILE)
-            .expect("Failed to create session"),
-    }).await;
+        session: Session::load_file_or_create(SESSION_FILE).expect("Failed to create session"),
+    })
+    .await;
     if login.is_err() {
         panic!("failed to connect to the telegram");
     }
     let client_handler = login.expect("failed to create client");
 
-    if !client_handler.is_authorized().await.expect("couldnt get authorization status") {
+    if !client_handler
+        .is_authorized()
+        .await
+        .expect("couldnt get authorization status")
+    {
         println!("you are not authorized,requesting verification code");
 
         let signed_in = sign_in_async(&config, &client_handler).await;
@@ -68,14 +70,14 @@ async fn main_async() -> AsyncResult {
 
         save_session(&client_handler)
     }
-    create_dir_if_not_exists("images")
-        .expect("failed to create images directory.");
+    create_dir_if_not_exists("images").expect("failed to create images directory.");
 
     println!("signed in,getting updates...");
     let client = client_handler.clone();
     let network = task::spawn(async move { client_handler.run_until_disconnected().await });
 
-    handle_updates_async(&config, client).await
+    handle_updates_async(&config, client)
+        .await
         .expect("failed to handle updates");
 
     network.await??;
@@ -84,11 +86,22 @@ async fn main_async() -> AsyncResult {
 
 async fn handle_updates_async(conf: &AppConfig, client: Client) -> AsyncResult {
     let image_dir = current_dir()?.join("images");
-    let to = client.resolve_username(&conf.to).await.expect("couldn't resolve the username[destination channel]").unwrap();
+    let to = client
+        .resolve_username(&conf.to)
+        .await
+        .expect("couldn't resolve the username[destination channel]")
+        .unwrap();
     while let Some(update) = client.next_update().await? {
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
-                handle_new_message(&conf.from, &to, message, &image_dir.to_str().unwrap(), &client).await;
+                handle_new_message(
+                    &conf.from,
+                    &to,
+                    message,
+                    &image_dir.to_str().unwrap(),
+                    &client,
+                )
+                .await;
                 async_std::task::sleep(Duration::from_secs(1)).await;
             }
             _ => {}
@@ -97,7 +110,13 @@ async fn handle_updates_async(conf: &AppConfig, client: Client) -> AsyncResult {
     Ok(())
 }
 
-async fn handle_new_message(from: &str, to: &Chat, message: Message, image_dir: &str, client: &Client) {
+async fn handle_new_message(
+    from: &str,
+    to: &Chat,
+    message: Message,
+    image_dir: &str,
+    client: &Client,
+) {
     match message.chat() {
         Channel(ch) if ch.username().is_some() && ch.username().unwrap() == from => {
             if message.media().is_none() {
@@ -105,9 +124,15 @@ async fn handle_new_message(from: &str, to: &Chat, message: Message, image_dir: 
             }
             let media = message.media().unwrap();
             let path = create_file_name_with_path(&media, image_dir);
-            client.download_media(&media, &path).await.expect("couldn't download the media");
+            client
+                .download_media(&media, &path)
+                .await
+                .expect("couldn't download the media");
 
-            let uploaded = client.upload_file(&path).await.expect("couldn't upload the file");
+            let uploaded = client
+                .upload_file(&path)
+                .await
+                .expect("couldn't upload the file");
             let message = InputMessage::document(InputMessage::text(""), uploaded);
             let send = client.send_message(to, message).await;
             if send.is_ok() {
