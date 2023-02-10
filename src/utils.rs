@@ -66,3 +66,16 @@ pub fn create_file_name_with_path(media: &Media, image_dir: &PathBuf) -> PathBuf
     let random_hash = format!("{:x}", md5::compute(name));
     return Path::new(&image_dir.to_str().unwrap()).join(format!("Pixoro-{}.{}", random_hash, extension));
 }
+
+#[macro_export]
+macro_rules! continue_on_error {
+    ($e:expr) => {
+        match $e {
+            Ok(x) => x,
+            Err(e) => {
+                println!("Error: {:?}", e);
+                continue;
+            }
+        }
+    };
+}

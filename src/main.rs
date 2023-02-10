@@ -110,9 +110,10 @@ async fn run_history_async(client: Client, to_chat: &Chat, from: &str, image_dir
 
     while let Some(message) = messages.next().await.expect("failed to get the next message[history]") {
         let caption = format!("id={}", message.id());
-        let media = message.media().expect("failed to unwrap media in [history]");
-        download_rename_send_media(&client, &media, image_dir, &to_chat, Some(caption.as_str()))
-            .await.expect("failed to download media[history]");
+        let media = message.media().unwrap();
+
+        continue_on_error!(download_rename_send_media(&client, &media, image_dir, &to_chat, Some(caption.as_str())).await);
+
     }
     Ok(())
 }
@@ -132,7 +133,7 @@ async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, cli
                         continue;
                     }
                     let media =message.media().expect("failed to unwrap media [handle_update]");
-                    download_rename_send_media(&client, &media, image_dir, &chat, None).await?;
+                    continue_on_error!(download_rename_send_media(&client, &media, image_dir, &chat, None).await)
                 }
             }
             _ => {}
