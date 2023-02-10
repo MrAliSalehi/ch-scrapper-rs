@@ -7,7 +7,6 @@ use grammers_client::{Client, Config, InitParams, InputMessage, Update};
 use grammers_session::{Session};
 use serde_json;
 use std::env::current_dir;
-use std::intrinsics::try;
 use std::path::PathBuf;
 use std::time::Duration;
 use grammers_client::types::Media::Document;
