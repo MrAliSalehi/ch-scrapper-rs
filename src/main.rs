@@ -111,7 +111,6 @@ async fn run_history_async(client: Client, to_chat: &Chat, from: &str, image_dir
     while let Some(message) = messages.next().await? {
         let caption = format!("id={}", message.id());
         download_rename_send_media(&client, &message.media().unwrap(), image_dir, &to_chat, Some(caption.as_str())).await?;
-        async_std::task::sleep(Duration::from_secs(3)).await;
     }
     Ok(())
 }
@@ -135,7 +134,7 @@ async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, cli
             }
             _ => {}
         }
-        async_std::task::sleep(Duration::from_secs(4)).await;
+
     }
     Ok(())
 }
@@ -156,6 +155,7 @@ async fn download_rename_send_media(client: &Client, media: &Media, image_dir: &
 
         let message = InputMessage::document(InputMessage::text(caption.unwrap_or("")), uploaded);
         let send = client.send_message(to, message).await;
+        async_std::task::sleep(Duration::from_secs(4)).await;
         if send.is_ok() {
             async_std::fs::remove_file(&path).await?;
         }
