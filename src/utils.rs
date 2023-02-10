@@ -49,13 +49,6 @@ pub fn file_extension(media: &Media) -> Option<&str> {
     return None;
 }
 
-pub fn file_name(media: &Media) -> Option<&str> {
-    if let Media::Document(document) = media {
-        return Some(document.name());
-    }
-    return None;
-}
-
 pub fn create_dir_if_not_exists(path: &str) -> Option<bool> {
     let unwrap = std::env::current_dir();
     if unwrap.is_err() {
