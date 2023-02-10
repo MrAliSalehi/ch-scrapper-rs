@@ -112,7 +112,7 @@ async fn run_history_async(client: Client, to_chat: &Chat, from: &str, image_dir
         let caption = format!("id={}", message.id());
         download_rename_send_media(&client, &message.media().unwrap(), image_dir, &to_chat, Some(caption.as_str())).await
             .expect("failed to process media");
-        async_std::task::sleep(Duration::from_millis(1300)).await;
+        async_std::task::sleep(Duration::from_millis(2300)).await;
     }
     Ok(())
 }
@@ -137,7 +137,7 @@ async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, cli
             }
             _ => {}
         }
-        async_std::task::sleep(Duration::from_secs(1)).await;
+        async_std::task::sleep(Duration::from_secs(2)).await;
     }
     Ok(())
 }
