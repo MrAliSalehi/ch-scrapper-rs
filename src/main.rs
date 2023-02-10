@@ -7,6 +7,7 @@ use grammers_client::{Client, Config, InitParams, InputMessage, Update};
 use grammers_session::{Session};
 use serde_json;
 use std::env::current_dir;
+use std::intrinsics::try;
 use std::path::PathBuf;
 use std::time::Duration;
 use grammers_client::types::Media::Document;
@@ -81,7 +82,10 @@ async fn main() -> AsyncResult {
     let client_clone = client.clone();
     let from_clone = config.from.clone();
     spawn(async move {
-        run_history_async(client, &to_chat, from_clone.as_str(), &image_dir).await.unwrap();
+        let res = run_history_async(client, &to_chat, from_clone.as_str(), &image_dir).await;
+        if let Err(e) = res {
+            println!("{:#?}", e)
+        }
     });
 
     handle_updates_async(config.from, to_chat_clone, &image_clone, client_clone).await?;
@@ -93,24 +97,26 @@ async fn main() -> AsyncResult {
 async fn run_history_async(client: Client, to_chat: &Chat, from: &str, image_dir: &PathBuf) -> AsyncResult {
     let last_message = client
         .search_messages(to_chat)
-        .query("id=").next().await?;
+        .query("id=").next().await.expect("could not get the next message");
     let mut last_message_id = 0;
 
     if last_message.is_some() {
-        let msg = last_message.unwrap();
+        let msg = last_message.expect("failed to get last message.");
         let split = msg.text().split('=').collect::<Vec<&str>>()[1];
         last_message_id = split.parse::<i32>().unwrap_or(0);
     }
 
-    let from_chat = client.resolve_username(from).await?.unwrap();
+    let from_chat = client.resolve_username(from).await?.expect("failed to resolve [from]");
     let mut messages = client
         .search_messages(from_chat)
         .filter(InputMessagesFilterDocument)
         .offset_id(last_message_id);
 
-    while let Some(message) = messages.next().await? {
+    while let Some(message) = messages.next().await.expect("failed to get the next message[history]") {
         let caption = format!("id={}", message.id());
-        download_rename_send_media(&client, &message.media().unwrap(), image_dir, &to_chat, Some(caption.as_str())).await?;
+        let media = message.media().expect("failed to unwrap media in [history]");
+        download_rename_send_media(&client, &media, image_dir, &to_chat, Some(caption.as_str()))
+            .await.expect("failed to download media[history]");
     }
     Ok(())
 }
@@ -129,7 +135,8 @@ async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, cli
                     if message.media().is_none() {
                         continue;
                     }
-                    download_rename_send_media(&client, &message.media().unwrap(), image_dir, &chat, None).await?;
+                    let media =message.media().expect("failed to unwrap media [handle_update]");
+                    download_rename_send_media(&client, &media, image_dir, &chat, None).await?;
                 }
             }
             _ => {}
@@ -140,22 +147,22 @@ async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, cli
 
 async fn download_rename_send_media(client: &Client, media: &Media, image_dir: &PathBuf, to: &Chat, caption: Option<&str>) -> AsyncResult {
     if let Document(doc) = media {
-        if !doc.mime_type().unwrap().starts_with("image") {
+        if !doc.mime_type().expect("cant unwrap mime type").starts_with("image") {
             return Ok(());
         }
         if doc.size() > 10100000 {
             return Ok(());
         }
         let path = create_file_name_with_path(&media, image_dir);
-        client.download_media(&media, &path).await?;
+        client.download_media(&media, &path).await.expect("couldnt download the media");
 
-        let uploaded = client.upload_file(&path).await?;
+        let uploaded = client.upload_file(&path).await.expect("couldnt upload the file");
 
         let message = InputMessage::document(InputMessage::text(caption.unwrap_or("")), uploaded);
         let send = client.send_message(to, message).await;
-        async_std::task::sleep(Duration::from_secs(4)).await;
+        async_std::task::sleep(Duration::from_secs(5)).await;
         if send.is_ok() {
-            async_std::fs::remove_file(&path).await?;
+            async_std::fs::remove_file(&path).await.expect("couldn't remove the file");
         }
     }
     Ok(())
