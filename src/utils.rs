@@ -3,6 +3,7 @@ use crate::config::AppConfig;
 use grammers_client::types::Media;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
+use rand::Rng;
 
 
 pub fn config_exists() -> bool {
@@ -74,9 +75,9 @@ pub fn create_dir_if_not_exists(path: &str) -> Option<bool> {
 
 pub fn create_file_name_with_path(media: &Media, image_dir: &PathBuf) -> PathBuf {
     let extension = file_extension(&media).unwrap_or_else(|| "png");
-    let file_name = file_name(&media).unwrap_or_else(|| "default_name");
-
-    let random_hash = format!("{:x}", md5::compute(file_name));
+    let random: i64 = rand::thread_rng().gen();
+    let name = format!("{}", chrono::Utc::now().timestamp_nanos() + random);
+    let random_hash = format!("{:x}", md5::compute(name));
 
     return Path::new(image_dir.to_str().unwrap()).join(format!("Pixoro-{}.{}", random_hash, extension));
 }
