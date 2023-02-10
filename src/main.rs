@@ -131,13 +131,8 @@ async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, cli
                     if message.media().is_none() {
                         continue;
                     }
-                    if let Document(doc) = message.media().unwrap() {
-                        if !doc.mime_type().unwrap().starts_with("image") {
-                            continue;
-                        }
-                        download_rename_send_media(&client, &message.media().unwrap(), image_dir, &chat, None).await
-                            .expect("failed to process media");
-                    }
+                    download_rename_send_media(&client, &message.media().unwrap(), image_dir, &chat, None).await
+                        .expect("failed to process media");
                 }
             }
             _ => {}
@@ -148,19 +143,25 @@ async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, cli
 }
 
 async fn download_rename_send_media(client: &Client, media: &Media, image_dir: &PathBuf, to: &Chat, caption: Option<&str>) -> AsyncResult {
-    let path = create_file_name_with_path(&media, image_dir);
-    client.download_media(&media, &path).await
-        .expect("couldn't download the media");
+    if let Document(doc) = media {
+        if !doc.mime_type().unwrap().starts_with("image") {
+            return Ok(());
+        }
+        let path = create_file_name_with_path(&media, image_dir);
+        client.download_media(&media, &path).await
+            .expect("couldn't download the media");
 
-    let uploaded = client.upload_file(&path).await
-        .expect("couldn't upload the file");
+        let uploaded = client.upload_file(&path).await
+            .expect("couldn't upload the file");
 
-    let message = InputMessage::document(InputMessage::text(caption.unwrap_or("")), uploaded);
-    let send = client.send_message(to, message).await;
-    if send.is_ok() {
-        async_std::fs::remove_file(&path).await
-            .expect("couldn't remove the file");
-        return Ok(());
+        let message = InputMessage::document(InputMessage::text(caption.unwrap_or("")), uploaded);
+        let send = client.send_message(to, message).await;
+        if send.is_ok() {
+            async_std::fs::remove_file(&path).await
+                .expect("couldn't remove the file");
+            return Ok(());
+        }
+        panic!("couldn't send the file");
     }
-    panic!("couldn't send the file");
+    Ok(())
 }
