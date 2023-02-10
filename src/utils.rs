@@ -4,7 +4,8 @@ use grammers_client::types::Media;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use rand::Rng;
-
+use std::fs;
+use std::io;
 
 pub fn config_exists() -> bool {
     std::env::current_dir()
@@ -49,21 +50,13 @@ pub fn file_extension(media: &Media) -> Option<&str> {
     return None;
 }
 
-pub fn create_dir_if_not_exists(path: &str) -> Option<bool> {
-    let unwrap = std::env::current_dir();
-    if unwrap.is_err() {
-        return None;
-    }
-    let current_dir = unwrap.unwrap();
+pub fn create_dir_if_not_exists(path: &str) -> Result<(), io::Error> {
+    let current_dir = std::env::current_dir()?;
     let final_path = current_dir.join(path);
     if !final_path.exists() {
-        let create_result = std::fs::create_dir_all(&final_path);
-        if create_result.is_err() {
-            return None;
-        }
-        return Some(true);
+        fs::create_dir_all(&final_path)?;
     }
-    return Some(true);
+    Ok(())
 }
 
 pub fn create_file_name_with_path(media: &Media, image_dir: &PathBuf) -> PathBuf {
@@ -71,6 +64,5 @@ pub fn create_file_name_with_path(media: &Media, image_dir: &PathBuf) -> PathBuf
     let random: i64 = rand::thread_rng().gen();
     let name = format!("{}", chrono::Utc::now().timestamp_nanos() + random);
     let random_hash = format!("{:x}", md5::compute(name));
-
-    return Path::new(image_dir.to_str().unwrap()).join(format!("Pixoro-{}.{}", random_hash, extension));
+    return Path::new(&image_dir.to_str().unwrap()).join(format!("Pixoro-{}.{}", random_hash, extension));
 }

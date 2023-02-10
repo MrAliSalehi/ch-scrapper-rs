@@ -12,16 +12,13 @@ use std::time::Duration;
 use grammers_client::types::Media::Document;
 use grammers_tl_types::enums::MessagesFilter::InputMessagesFilterDocument;
 use tokio::{spawn};
-
+use std::error::Error;
 mod account_manager;
 mod config;
 mod utils;
 
-type AsyncResult = Result<(), Box<dyn std::error::Error>>;
-
-
 #[tokio::main]
-async fn main() -> AsyncResult {
+async fn main() -> Result<(),Box<dyn Error>> {
     if !config_exists() {
         println!("Config file not found");
         return Ok(());
@@ -93,7 +90,7 @@ async fn main() -> AsyncResult {
     Ok(())
 }
 
-async fn run_history_async(client: Client, to_chat: &Chat, from: &str, image_dir: &PathBuf) -> AsyncResult {
+async fn run_history_async(client: Client, to_chat: &Chat, from: &str, image_dir: &PathBuf) -> Result<(),Box<dyn Error>> {
     let last_message = client
         .search_messages(to_chat)
         .query("id=").next().await.expect("could not get the next message");
@@ -120,7 +117,7 @@ async fn run_history_async(client: Client, to_chat: &Chat, from: &str, image_dir
     Ok(())
 }
 
-async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, client: Client) -> AsyncResult {
+async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, client: Client) -> Result<(),Box<dyn Error>> {
     while let Some(update) = client.next_update().await? {
         match update {
             Update::NewMessage(message) if !message.outgoing() => {
@@ -144,7 +141,7 @@ async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, cli
     Ok(())
 }
 
-async fn download_rename_send_media(client: &Client, media: &Media, image_dir: &PathBuf, to: &Chat, caption: Option<&str>) -> AsyncResult {
+async fn download_rename_send_media(client: &Client, media: &Media, image_dir: &PathBuf, to: &Chat, caption: Option<&str>) -> Result<(),Box<dyn Error>> {
     if let Document(doc) = media {
         if !doc.mime_type().expect("cant unwrap mime type").starts_with("image") {
             return Ok(());
