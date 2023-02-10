@@ -214,7 +214,7 @@ dependencies = [
  "num-traits",
  "time",
  "wasm-bindgen",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -475,16 +475,16 @@ dependencies = [
 
 [[package]]
 name = "glass_pumpkin"
-version = "1.3.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aebf11b7bbf35a86a661a9bcf836888ddf0a8c1b94cbb62f70d9916e0e7f67e"
+checksum = "1b44974fc56b07c428059dbe44242ea9d89f09250d77a74c941e00c0ccd471d8"
 dependencies = [
  "core2",
  "lazy_static",
  "num-bigint",
  "num-integer",
  "num-traits",
- "rand",
+ "rand_core",
 ]
 
 [[package]]
@@ -502,8 +502,7 @@ dependencies = [
 [[package]]
 name = "grammers-client"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e02e0e6241d1b39a091c0a93edceb2c55e62f22d417c6eda556c460ef9d904e"
+source = "git+https://github.com/Lonami/grammers#a0c5ef3178efd175381434f3d891045d186e5cc3"
 dependencies = [
  "chrono",
  "futures-util",
@@ -524,8 +523,7 @@ dependencies = [
 [[package]]
 name = "grammers-crypto"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "573508524fd529ced63fe827fb89629a186414541fd9e645fef9ba499fc69c63"
+source = "git+https://github.com/Lonami/grammers#a0c5ef3178efd175381434f3d891045d186e5cc3"
 dependencies = [
  "aes",
  "getrandom",
@@ -540,8 +538,7 @@ dependencies = [
 [[package]]
 name = "grammers-mtproto"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f32276f8323f37ea7470b3df54c845c5da659c11cef300772c096d0f9afbc75e"
+source = "git+https://github.com/Lonami/grammers#a0c5ef3178efd175381434f3d891045d186e5cc3"
 dependencies = [
  "bytes",
  "crc32fast",
@@ -557,8 +554,7 @@ dependencies = [
 [[package]]
 name = "grammers-mtsender"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe7cf913b8dcf9155d42c0ea0cef687c4feca5bc9c6c37d7df126897448d8f9a"
+source = "git+https://github.com/Lonami/grammers#a0c5ef3178efd175381434f3d891045d186e5cc3"
 dependencies = [
  "bytes",
  "grammers-mtproto",
@@ -569,9 +565,8 @@ dependencies = [
 
 [[package]]
 name = "grammers-session"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cd9c4ea36da6bb68a18bd66b1bc8583db56e688861bf1d907992fa220768195"
+version = "0.4.1"
+source = "git+https://github.com/Lonami/grammers#a0c5ef3178efd175381434f3d891045d186e5cc3"
 dependencies = [
  "grammers-tl-gen",
  "grammers-tl-parser",
@@ -582,8 +577,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-gen"
 version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19b32c941b054d55aaa1a706d28cd73db95c3fa811b1abdc8f074825a33ae46c"
+source = "git+https://github.com/Lonami/grammers#a0c5ef3178efd175381434f3d891045d186e5cc3"
 dependencies = [
  "grammers-tl-parser",
 ]
@@ -591,8 +585,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-parser"
 version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28c8806975587d803cc59e3bcf06e95026db58c9a79cde20b5a73c31eb731290"
+source = "git+https://github.com/Lonami/grammers#a0c5ef3178efd175381434f3d891045d186e5cc3"
 dependencies = [
  "crc32fast",
 ]
@@ -600,8 +593,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-types"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d01968ac09a8b7d3dc5569631c2059d38f00ff92e1700d62b7d9e7eb473c8f3b"
+source = "git+https://github.com/Lonami/grammers#a0c5ef3178efd175381434f3d891045d186e5cc3"
 dependencies = [
  "grammers-tl-gen",
  "grammers-tl-parser",
@@ -637,7 +629,7 @@ dependencies = [
  "iana-time-zone-haiku",
  "js-sys",
  "wasm-bindgen",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -675,16 +667,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kernel32-sys"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
-dependencies = [
- "winapi 0.2.8",
- "winapi-build",
-]
-
-[[package]]
 name = "kv-log-macro"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -716,11 +698,11 @@ dependencies = [
 
 [[package]]
 name = "locate-locale"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2566fa1f7d9948dcc53b1854d2218dc5dbb54b6950e7f277e513c660819d6cce"
+checksum = "2835eaaed39a92511442aff277d4dca3d7674ca058df3bc45170661c2ccb4619"
 dependencies = [
- "kernel32-sys",
+ "winapi",
 ]
 
 [[package]]
@@ -852,7 +834,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c424bc68d15e0778838ac013b5b3449544d8133633d8016319e7e05a820b8c0"
 dependencies = [
  "log",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -935,12 +917,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ppv-lite86"
-version = "0.2.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -964,18 +940,6 @@ version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404"
 dependencies = [
- "libc",
- "rand_chacha",
- "rand_core",
-]
-
-[[package]]
-name = "rand_chacha"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6c10a63a0fa32252be49d21e7709d4d4baf8d231c2dbce1eaa8141b9b127d88"
-dependencies = [
- "ppv-lite86",
  "rand_core",
 ]
 
@@ -1105,7 +1069,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02e2d2db9033d13a1567121ddd7a095ee144db4e1ca1b1bda3419bc0da294ebd"
 dependencies = [
  "libc",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -1142,7 +1106,7 @@ checksum = "1b797afad3f312d1c66a56d11d0316f916356d11bd158fbc6ca6389ff6bf805a"
 dependencies = [
  "libc",
  "wasi 0.10.0+wasi-snapshot-preview1",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -1339,12 +1303,6 @@ dependencies = [
 
 [[package]]
 name = "winapi"
-version = "0.2.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "167dc9d6949a9b857f3451275e911c3f44255842c1f7a76f33c55103a909087a"
-
-[[package]]
-name = "winapi"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419"
@@ -1352,12 +1310,6 @@ dependencies = [
  "winapi-i686-pc-windows-gnu",
  "winapi-x86_64-pc-windows-gnu",
 ]
-
-[[package]]
-name = "winapi-build"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d315eee3b34aca4797b2da6b13ed88266e6d612562a0c46390af8299fc699bc"
 
 [[package]]
 name = "winapi-i686-pc-windows-gnu"
@@ -1371,7 +1323,7 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70ec6ce85bb158151cae5e5c87f95a8e97d2c0c4b001223f33a334e3ce5de178"
 dependencies = [
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]

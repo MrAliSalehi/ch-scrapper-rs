@@ -5,6 +5,6 @@ pub struct AppConfig {
     pub api_hash: String,
     pub api_id: i32,
     pub phone: String,
-    pub from: Vec<String>,
+    pub from: String,
     pub to: String,
 }
