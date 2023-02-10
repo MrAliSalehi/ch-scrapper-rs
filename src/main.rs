@@ -147,6 +147,10 @@ async fn download_rename_send_media(client: &Client, media: &Media, image_dir: &
         if !doc.mime_type().unwrap().starts_with("image") {
             return Ok(());
         }
+        if doc.size() > 10100000 {
+            return Ok(());
+        }
+
         let path = create_file_name_with_path(&media, image_dir);
         client.download_media(&media, &path).await
             .expect("couldn't download the media");
