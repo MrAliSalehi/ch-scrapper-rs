@@ -3,7 +3,6 @@ use crate::config::AppConfig;
 use grammers_client::types::Media;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
-use rand::Rng;
 use std::fs;
 use std::io;
 
