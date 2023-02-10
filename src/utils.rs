@@ -61,8 +61,7 @@ pub fn create_dir_if_not_exists(path: &str) -> Result<(), io::Error> {
 
 pub fn create_file_name_with_path(media: &Media, image_dir: &PathBuf) -> PathBuf {
     let extension = file_extension(&media).unwrap_or_else(|| "png");
-    let random: i64 = rand::thread_rng().gen();
-    let name = format!("{}", chrono::Utc::now().timestamp_nanos() + random);
+    let name = format!("{}", chrono::Utc::now().timestamp_nanos());
     let random_hash = format!("{:x}", md5::compute(name));
     return Path::new(&image_dir.to_str().unwrap()).join(format!("Pixoro-{}.{}", random_hash, extension));
 }
