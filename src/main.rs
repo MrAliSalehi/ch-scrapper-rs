@@ -110,8 +110,7 @@ async fn run_history_async(client: Client, to_chat: &Chat, from: &str, image_dir
 
     while let Some(message) = messages.next().await? {
         let caption = format!("id={}", message.id());
-        download_rename_send_media(&client, &message.media().unwrap(), image_dir, &to_chat, Some(caption.as_str())).await
-            .expect("failed to process media");
+        download_rename_send_media(&client, &message.media().unwrap(), image_dir, &to_chat, Some(caption.as_str())).await?;
         async_std::task::sleep(Duration::from_secs(3)).await;
     }
     Ok(())
@@ -131,8 +130,7 @@ async fn handle_updates_async(from: String, chat: Chat, image_dir: &PathBuf, cli
                     if message.media().is_none() {
                         continue;
                     }
-                    download_rename_send_media(&client, &message.media().unwrap(), image_dir, &chat, None).await
-                        .expect("failed to process media");
+                    download_rename_send_media(&client, &message.media().unwrap(), image_dir, &chat, None).await?;
                 }
             }
             _ => {}
@@ -152,20 +150,15 @@ async fn download_rename_send_media(client: &Client, media: &Media, image_dir: &
         }
 
         let path = create_file_name_with_path(&media, image_dir);
-        client.download_media(&media, &path).await
-            .expect("couldn't download the media");
+        client.download_media(&media, &path).await?;
 
-        let uploaded = client.upload_file(&path).await
-            .expect("couldn't upload the file");
+        let uploaded = client.upload_file(&path).await?;
 
         let message = InputMessage::document(InputMessage::text(caption.unwrap_or("")), uploaded);
         let send = client.send_message(to, message).await;
         if send.is_ok() {
-            async_std::fs::remove_file(&path).await
-                .expect("couldn't remove the file");
-            return Ok(());
+            async_std::fs::remove_file(&path).await?;
         }
-        panic!("couldn't send the file");
     }
     Ok(())
 }
